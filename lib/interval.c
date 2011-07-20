@@ -18,21 +18,6 @@ int compare_interval_by_start (const void *a, const void *b)
 }
 //}}}
 
-/*
-//{{{ int compare_unsigned_int (const void *a, const void *b)
-int compare_unsigned_int (const void *a, const void *b)
-{  
-	unsigned int *a_i = (unsigned int *)a;
-	unsigned int *b_i = (unsigned int *)b;
-	if (*a_i < *b_i)
-		return -1;
-	else if (*a_i > *b_i)
-		return 1;
-	else
-		return 0;
-}
-//}}}
-*/
 //{{{ unsigned int count_intersections_bsearch_seq(struct interval *A,
 unsigned int count_intersections_bsearch_seq(struct interval *A,
 										     unsigned int size_A,
@@ -123,18 +108,7 @@ unsigned int count_intersections_i_bsearch_seq(struct interval *A,
 									   I_starts,
 									   size_I);
 
-		/*
-		unsigned int num_cant_before = bsearch_seq(A[i].start,
-												B_ends,
-												size_B,
-												   -1,
-												   size_B);
-		unsigned int b = bsearch_seq(A[i].end,
-									   B_starts,
-									   size_B,
-												   -1,
-												   size_B);
-		*/
+		//nsigned int x = b;
 
 		while ( ( B_starts[b] == A[i].end) && b < size_B)
 			++b;
@@ -142,7 +116,22 @@ unsigned int count_intersections_i_bsearch_seq(struct interval *A,
 		unsigned int num_cant_after = size_B - b;
 
 		unsigned int num_left = size_B - num_cant_before - num_cant_after;
+
 		O += num_left;
+
+		/*
+		printf("i\t"
+			   "%u\t"
+			   "%u\t"
+			   "%u\t"
+			   "%u\t"
+			   "%u\n",
+			   num_cant_before,
+			   num_cant_after,
+			   A[i].end,
+			   B_starts[x],
+			   O);
+		*/
 	}
 
 	return O;
@@ -191,10 +180,12 @@ unsigned int count_intersections_t_bsearch_seq(struct interval *A,
 
 
 		unsigned int b = t_bsearch_seq(A[i].end,
-												B_starts,
-												size_B,
-												T_starts,
-												size_T);
+									   B_starts,
+									   size_B,
+									   T_starts,
+									   size_T);
+
+		//unsigned int x = b;
 
 		while ( ( B_starts[b] == A[i].end) && b < size_B)
 			++b;
@@ -202,7 +193,22 @@ unsigned int count_intersections_t_bsearch_seq(struct interval *A,
 		unsigned int num_cant_after = size_B - b;
 
 		unsigned int num_left = size_B - num_cant_before - num_cant_after;
+
 		O += num_left;
+
+		/*
+		printf("t\t"
+			   "%u\t"
+			   "%u\t"
+			   "%u\t"
+			   "%u\t"
+			   "%u\n",
+			   num_cant_before,
+			   num_cant_after,
+			   A[i].end,
+			   B_starts[x],
+			   O);
+		*/
 	}
 
 	return O;

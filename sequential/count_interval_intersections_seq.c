@@ -44,17 +44,20 @@ int main(int argc, char *argv[])
 	unsigned long bsearch_time = report();
 
 	start();
-	unsigned int OI = count_intersections_i_bsearch_seq(A, size_A, B, size_B, size_I);
+	unsigned int OI = count_intersections_i_bsearch_seq(A, size_A, B, size_B,
+			size_I);
 	stop();
 	unsigned long i_bsearch_time = report();
 
 	start();
-	unsigned int OT = count_intersections_t_bsearch_seq(A, size_A, B, size_B, size_T);
+	unsigned int OT = count_intersections_t_bsearch_seq(A, size_A, B, size_B,
+			size_T);
 	stop();
 	unsigned long t_bsearch_time = report();
 
 	start();
-	unsigned int OS = count_intersections_sort_bsearch_seq(A, size_A, B, size_B);
+	unsigned int OS = count_intersections_sort_bsearch_seq(A, size_A, B,
+			size_B);
 	stop();
 	unsigned long sort_bsearch_time = report();
 
