@@ -325,3 +325,27 @@ void generate_interval_sets(struct interval *A,
 	}
 }
 //}}}
+
+//{{{void generate_interval_sets(struct interval *A,
+// must run init_genrand(seed) first
+void generate_ind_interval_sets(struct interval *A,
+							unsigned int size_A,
+							unsigned int len_A,
+							struct interval *B,
+							unsigned int size_B,
+							unsigned int len_B)
+{
+
+	int i;
+
+    for (i = 0; i < size_A; i++) {
+		A[i].start = genrand_int32();
+		A[i].end = A[i].start + len_A;
+	}
+	
+    for (i = 0; i < size_B; i++) {
+		B[i].start = genrand_int32();
+		B[i].end = B[i].start + len_B;
+	}
+}
+//}}}

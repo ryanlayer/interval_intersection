@@ -40,4 +40,12 @@ void generate_interval_sets(struct interval *A,
 							unsigned int size_B,
 							unsigned int len_B,
 							unsigned int P);
+
+void generate_ind_interval_sets(struct interval *A,
+							unsigned int size_A,
+							unsigned int len_A,
+							struct interval *B,
+							unsigned int size_B,
+							unsigned int len_B);
+
 #endif
