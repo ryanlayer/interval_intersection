@@ -44,35 +44,25 @@ int main(int argc, char *argv[])
 													   size_A,
 													   B,
 													   size_B);
-	start();
-	OC = count_intersections_bsearch_cuda(A,
-													   size_A,
-													   B,
-													   size_B);
-	stop();
-	unsigned long bsearch_cuda_time = report();
 
-	start();
-	unsigned int IC = count_intersections_i_bsearch_cuda(A,
+	OC = count_intersections_bsearch_cuda(A,
+										  size_A,
+										  B,
+										  size_B);
+
+	unsigned int IC = count_intersections_i_gm_bsearch_cuda(A,
 													   size_A,
 													   B,
 													   size_B,
 													   size_T);
-	stop();
-	unsigned long i_bsearch_cuda_time = report();
 
-	start();
 	unsigned int SC = count_intersections_sort_bsearch_cuda(A,
 													   size_A,
 													   B,
 													   size_B);
-	stop();
-	unsigned long sort_bsearch_cuda_time = report();
 
-	printf("b:%u,%lu\n" 
-		   "i:%u,%lu\n"
-		   "s:%u,%lu\n",
-		   OC, bsearch_cuda_time,
-		   IC, i_bsearch_cuda_time,
-		   SC, sort_bsearch_cuda_time);
+	printf("%u\t"
+			"%u\t"
+			"%u\n",
+			OC, IC, SC);
 }

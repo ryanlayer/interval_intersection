@@ -1,5 +1,6 @@
 CPP=g++
 CC=gcc
+CFLAGS=-g
 HOME=/home/rl6sf
 NVCC=/usr/local/cuda/bin/nvcc
 SDK_PATH=$(HOME)/NVIDIA_GPU_Computing_SDK
@@ -67,10 +68,10 @@ all: $(EXECS)
 
 
 %.cu.o: %.cu
-	$(NVCC) $(INCLUDES) -c $< -o $@
+	$(NVCC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 	
 %.o: %.cpp
-	$(CPP) $(INCLUDES) -c $< -o $@
+	$(CPP) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) $< -o $@

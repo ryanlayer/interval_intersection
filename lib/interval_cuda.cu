@@ -20,63 +20,31 @@ unsigned int count_intersections_bsearch_cuda(struct interval *A,
 	dim3 dimBlock(block_size);
 	int grid_size = ( size_A + block_size - 1) / (block_size * 1);
 	dim3 dimGridSearch( grid_size );
-	unsigned int i;
 	cudaError_t err;
 
-	//{{{ Move intervals to unsigned int arrays
-	unsigned int *A_starts_h = 
-		(unsigned int *) malloc( (size_A) * sizeof(unsigned int));
-	unsigned int *A_lens_h = 
-		(unsigned int *) malloc( (size_A) * sizeof(unsigned int));
+	start(); //data_prep_time
 
-	unsigned int *B_starts_h = 
-		(unsigned int *) malloc( (size_B) * sizeof(unsigned int));
-	unsigned int *B_ends_h = 
-		(unsigned int *) malloc( (size_B) * sizeof(unsigned int));
-
-	for (i = 0; i < size_B; i++) {
-		B_starts_h[i] = B[i].start;
-		B_ends_h[i] = B[i].end;
-	}
-
-	for (i = 0; i < size_A; i++) {
-		A_starts_h[i] = A[i].start;
-		A_lens_h[i] = A[i].end - A[i].start;
-	}
-	//}}}
-
-	//{{{ Move inteval arrays to device
+	unsigned int *A_starts_h, *A_lens_h, *B_starts_h, *B_ends_h;
 	unsigned int *A_starts_d, *A_lens_d, *B_starts_d, *B_ends_d;
-	cudaMalloc((void **)&A_starts_d, (size_A)*sizeof(unsigned int));
-	cudaMalloc((void **)&A_lens_d, (size_A)*sizeof(unsigned int));
-	cudaMalloc((void **)&B_starts_d, (size_B)*sizeof(unsigned int));
-	cudaMalloc((void **)&B_ends_d, (size_B)*sizeof(unsigned int));
-
-	cudaMemcpy(A_starts_d, A_starts_h, (size_A) * sizeof(unsigned int), 
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(A_lens_d, A_lens_h, (size_A) * sizeof(unsigned int),
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(B_starts_d, B_starts_h, (size_B) * sizeof(unsigned int), 
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(B_ends_d, B_ends_h, (size_B) * sizeof(unsigned int),
-			cudaMemcpyHostToDevice);
-
-	cudaThreadSynchronize();
-	err = cudaGetLastError();
-	if(err != cudaSuccess)
-		fprintf(stderr, "Interval move: %s.\n", cudaGetErrorString( err) );
-	//}}}
-	
-	//{{{ Alocate space for result on device
 	unsigned int *R_d;
-	cudaMalloc((void **)&R_d, (size_A)*sizeof(unsigned int));
-	unsigned long memup_time = report();
+	allocate_and_move(A,
+					&A_starts_h,
+					&A_starts_d,
+					&A_lens_h ,
+					&A_lens_d,
+					size_A,
+					B,
+					&B_starts_h ,
+					&B_starts_d,
+					&B_ends_h ,
+					&B_ends_d,
+					size_B,
+					&R_d);
 
-	cudaThreadSynchronize();
-	err = cudaGetLastError();
-	if(err != cudaSuccess)
-		fprintf(stderr, "R_d malloc: %s.\n", cudaGetErrorString( err) );
-	//}}}
+	stop(); //data_prep_time
+	unsigned long data_prep_time = report();
+
+	start(); //sort_time
 
 	//{{{ Sort B_starts and B_ends
 	// Sort B by start
@@ -97,6 +65,11 @@ unsigned int count_intersections_bsearch_cuda(struct interval *A,
 	if(err != cudaSuccess)
 		fprintf(stderr, "Sort B_ends: %s.\n", cudaGetErrorString( err) );
 	//}}}
+
+	stop(); //sort_time
+	unsigned long sort_time = report();
+
+	start(); //intersect_time
 
 	//{{{ Compute and count intersections
 	count_bsearch_cuda <<<dimGridSearch, dimBlock >>> (
@@ -128,6 +101,22 @@ unsigned int count_intersections_bsearch_cuda(struct interval *A,
 
 	//}}}
 	
+	stop(); //intersect_time
+	unsigned long intersect_time = report();
+
+	unsigned long total_time = data_prep_time + 
+							   sort_time +
+							   intersect_time;
+	printf("bsearch\t"
+		   "total:%lu\t"
+		   "prep:%lu,%f\t"
+		   "sort:%lu,%f\t"
+		   "intersect:%lu,%f\n",
+		   total_time,
+		   data_prep_time,  (double)data_prep_time / (double)total_time,
+		   sort_time, (double)sort_time / (double)total_time,
+		   intersect_time, (double)intersect_time / (double)total_time);
+
 	cudaFree(A_starts_d);
 	cudaFree(A_lens_d);
 	cudaFree(B_starts_d);
@@ -148,64 +137,31 @@ unsigned int count_intersections_sort_bsearch_cuda(struct interval *A,
 	dim3 dimBlock(block_size);
 	int grid_size = ( size_A + block_size - 1) / (block_size * 1);
 	dim3 dimGridSearch( grid_size );
-	unsigned int i;
 	cudaError_t err;
 
-	//{{{ Move intervals to unsigned int arrays
-	unsigned int *A_starts_h = 
-		(unsigned int *) malloc( (size_A) * sizeof(unsigned int));
-	unsigned int *A_lens_h = 
-		(unsigned int *) malloc( (size_A) * sizeof(unsigned int));
-
-	unsigned int *B_starts_h = 
-		(unsigned int *) malloc( (size_B) * sizeof(unsigned int));
-	unsigned int *B_ends_h = 
-		(unsigned int *) malloc( (size_B) * sizeof(unsigned int));
-
-	for (i = 0; i < size_B; i++) {
-		B_starts_h[i] = B[i].start;
-		B_ends_h[i] = B[i].end;
-	}
-
-	for (i = 0; i < size_A; i++) {
-		A_starts_h[i] = A[i].start;
-		A_lens_h[i] = A[i].end - A[i].start;
-	}
-	//}}}
-
-	//{{{ Move inteval arrays to device
+	start(); //data_prep_time
+	//{{{ Allocate and move 
+	unsigned int *A_starts_h, *A_lens_h, *B_starts_h, *B_ends_h;
 	unsigned int *A_starts_d, *A_lens_d, *B_starts_d, *B_ends_d;
-	cudaMalloc((void **)&A_starts_d, (size_A)*sizeof(unsigned int));
-	cudaMalloc((void **)&A_lens_d, (size_A)*sizeof(unsigned int));
-	cudaMalloc((void **)&B_starts_d, (size_B)*sizeof(unsigned int));
-	cudaMalloc((void **)&B_ends_d, (size_B)*sizeof(unsigned int));
-
-	cudaMemcpy(A_starts_d, A_starts_h, (size_A) * sizeof(unsigned int), 
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(A_lens_d, A_lens_h, (size_A) * sizeof(unsigned int),
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(B_starts_d, B_starts_h, (size_B) * sizeof(unsigned int), 
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(B_ends_d, B_ends_h, (size_B) * sizeof(unsigned int),
-			cudaMemcpyHostToDevice);
-
-	cudaThreadSynchronize();
-	err = cudaGetLastError();
-	if(err != cudaSuccess)
-		fprintf(stderr, "Interval move: %s.\n", cudaGetErrorString( err) );
-	//}}}
-	
-	//{{{ Alocate space for result on device
 	unsigned int *R_d;
-	cudaMalloc((void **)&R_d, (size_A)*sizeof(unsigned int));
-	unsigned long memup_time = report();
-
-	cudaThreadSynchronize();
-	err = cudaGetLastError();
-	if(err != cudaSuccess)
-		fprintf(stderr, "R_d malloc: %s.\n", cudaGetErrorString( err) );
+	allocate_and_move(A,
+					&A_starts_h,
+					&A_starts_d,
+					&A_lens_h ,
+					&A_lens_d,
+					size_A,
+					B,
+					&B_starts_h ,
+					&B_starts_d,
+					&B_ends_h ,
+					&B_ends_d,
+					size_B,
+					&R_d);
 	//}}}
+	stop(); //data_prep_time
+	unsigned long data_prep_time = report();
 
+	start(); //sort_time
 	//{{{ Sort B_starts and B_ends
 	// Sort B by start
 	nvRadixSort::RadixSort radixsortB_starts(size_B, true);
@@ -225,7 +181,10 @@ unsigned int count_intersections_sort_bsearch_cuda(struct interval *A,
 	if(err != cudaSuccess)
 		fprintf(stderr, "Sort B_ends: %s.\n", cudaGetErrorString( err) );
 	//}}}
+	stop();	//sort_time
+	unsigned long sort_time = report();
 	
+	start();
 	//{{{ Sort A
 	nvRadixSort::RadixSort sort_A_starts_lens_d(size_A, false);
 	sort_A_starts_lens_d.sort((unsigned int*)A_starts_d, A_lens_d, size_A, 32);
@@ -238,7 +197,10 @@ unsigned int count_intersections_sort_bsearch_cuda(struct interval *A,
 	stop();
 	unsigned long sort_q_time = report();
 	//}}}
+	stop();	//pre_sort_time
+	unsigned long pre_sort_time = report();
 
+	start();
 	//{{{ Compute and count intersections
 	count_bsearch_cuda <<<dimGridSearch, dimBlock >>> (
 			A_starts_d, A_lens_d, size_A,
@@ -268,6 +230,24 @@ unsigned int count_intersections_sort_bsearch_cuda(struct interval *A,
 		fprintf(stderr, "Result move: %s.\n", cudaGetErrorString( err) );
 
 	//}}}
+	stop(); //intersect_time
+	unsigned long intersect_time = report();
+
+	unsigned long total_time = data_prep_time + 
+							   sort_time +
+							   pre_sort_time +
+							   intersect_time;
+	printf("sort\t"
+		   "total:%lu\t"
+		   "prep:%lu,%f\t"
+		   "sort:%lu,%f\t"
+		   "presort:%lu,%f\t"
+		   "intersect:%lu,%f\n",
+		   total_time,
+		   data_prep_time,  (double)data_prep_time / (double)total_time,
+		   sort_time, (double)sort_time / (double)total_time,
+		   pre_sort_time, (double)pre_sort_time / (double)total_time,
+		   intersect_time, (double)intersect_time / (double)total_time);
 
 	cudaFree(A_starts_d);
 	cudaFree(A_lens_d);
@@ -280,7 +260,7 @@ unsigned int count_intersections_sort_bsearch_cuda(struct interval *A,
 //}}}
 
 //{{{ unsigned int count_intersections_i_bsearch_cuda(struct interval *A,
-unsigned int count_intersections_i_bsearch_cuda(struct interval *A,
+unsigned int count_intersections_i_gm_bsearch_cuda(struct interval *A,
 										      unsigned int size_A,
 											  struct interval *B,
 										      unsigned int size_B,
@@ -290,64 +270,33 @@ unsigned int count_intersections_i_bsearch_cuda(struct interval *A,
 	dim3 dimBlock(block_size);
 	int grid_size = ( size_A + block_size - 1) / (block_size);
 	dim3 dimGridSearch( grid_size );
-	unsigned int i;
 	cudaError_t err;
 
-	//{{{ Move intervals to unsigned int arrays
-	unsigned int *A_starts_h = 
-		(unsigned int *) malloc( (size_A) * sizeof(unsigned int));
-	unsigned int *A_lens_h = 
-		(unsigned int *) malloc( (size_A) * sizeof(unsigned int));
+	start(); //data_prep_time
 
-	unsigned int *B_starts_h = 
-		(unsigned int *) malloc( (size_B) * sizeof(unsigned int));
-	unsigned int *B_ends_h = 
-		(unsigned int *) malloc( (size_B) * sizeof(unsigned int));
-
-	for (i = 0; i < size_B; i++) {
-		B_starts_h[i] = B[i].start;
-		B_ends_h[i] = B[i].end;
-	}
-
-	for (i = 0; i < size_A; i++) {
-		A_starts_h[i] = A[i].start;
-		A_lens_h[i] = A[i].end - A[i].start;
-	}
-	//}}}
-
-	//{{{ Move inteval arrays to device
+	//{{{ Allocate and move 
+	unsigned int *A_starts_h, *A_lens_h, *B_starts_h, *B_ends_h;
 	unsigned int *A_starts_d, *A_lens_d, *B_starts_d, *B_ends_d;
-	cudaMalloc((void **)&A_starts_d, (size_A)*sizeof(unsigned int));
-	cudaMalloc((void **)&A_lens_d, (size_A)*sizeof(unsigned int));
-	cudaMalloc((void **)&B_starts_d, (size_B)*sizeof(unsigned int));
-	cudaMalloc((void **)&B_ends_d, (size_B)*sizeof(unsigned int));
-
-	cudaMemcpy(A_starts_d, A_starts_h, (size_A) * sizeof(unsigned int), 
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(A_lens_d, A_lens_h, (size_A) * sizeof(unsigned int),
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(B_starts_d, B_starts_h, (size_B) * sizeof(unsigned int), 
-			cudaMemcpyHostToDevice);
-	cudaMemcpy(B_ends_d, B_ends_h, (size_B) * sizeof(unsigned int),
-			cudaMemcpyHostToDevice);
-
-	cudaThreadSynchronize();
-	err = cudaGetLastError();
-	if(err != cudaSuccess)
-		fprintf(stderr, "Interval move: %s.\n", cudaGetErrorString( err) );
-	//}}}
-	
-	//{{{ Alocate space for result on device
 	unsigned int *R_d;
-	cudaMalloc((void **)&R_d, (size_A)*sizeof(unsigned int));
-	unsigned long memup_time = report();
-
-	cudaThreadSynchronize();
-	err = cudaGetLastError();
-	if(err != cudaSuccess)
-		fprintf(stderr, "R_d malloc: %s.\n", cudaGetErrorString( err) );
+	allocate_and_move(A,
+					&A_starts_h,
+					&A_starts_d,
+					&A_lens_h ,
+					&A_lens_d,
+					size_A,
+					B,
+					&B_starts_h ,
+					&B_starts_d,
+					&B_ends_h ,
+					&B_ends_d,
+					size_B,
+					&R_d);
 	//}}}
+	//
+	stop(); //data_prep_time
+	unsigned long data_prep_time = report();
 
+	start();//sort_time
 	//{{{ Sort B_starts and B_ends
 	// Sort B by start
 	nvRadixSort::RadixSort radixsortB_starts(size_B, true);
@@ -367,7 +316,10 @@ unsigned int count_intersections_i_bsearch_cuda(struct interval *A,
 	if(err != cudaSuccess)
 		fprintf(stderr, "Sort B_ends: %s.\n", cudaGetErrorString( err) );
 	//}}}
+	stop();	//sort_time
+	unsigned long sort_time = report();
 
+	start();//index_time
 	//{{{ Generate index
 	unsigned int *I_starts_d, *I_ends_d;
 	cudaMalloc((void **)&I_starts_d, (size_I)*sizeof(unsigned int));
@@ -384,9 +336,11 @@ unsigned int count_intersections_i_bsearch_cuda(struct interval *A,
 	if(err != cudaSuccess)
 		fprintf(stderr, "Count i bsearch: %s.\n", cudaGetErrorString( err) );
 	//}}}
+	stop();	//index_time
+	unsigned long index_time = report();
 
 	//{{{ Compute and count intersections
-	count_i_bsearch_cuda <<<dimGridSearch, dimBlock >>> (
+	count_i_gm_bsearch_cuda <<<dimGridSearch, dimBlock >>> (
 			A_starts_d, A_lens_d, size_A,
 			B_starts_d, B_ends_d, size_B,
 			I_starts_d, I_ends_d, size_I,
@@ -415,7 +369,25 @@ unsigned int count_intersections_i_bsearch_cuda(struct interval *A,
 		fprintf(stderr, "Result move: %s.\n", cudaGetErrorString( err) );
 
 	//}}}
-	
+	stop(); //intersect_time
+	unsigned long intersect_time = report();
+
+	unsigned long total_time = data_prep_time + 
+							   sort_time +
+							   index_time +
+							   intersect_time;
+	printf("index gm\t"
+		   "total:%lu\t"
+		   "prep:%lu,%f\t"
+		   "sort:%lu,%f\t"
+		   "index:%lu,%f\t"
+		   "intersect:%lu,%f\n",
+		   total_time,
+		   data_prep_time,  (double)data_prep_time / (double)total_time,
+		   sort_time, (double)sort_time / (double)total_time,
+		   index_time, (double)index_time / (double)total_time,
+		   intersect_time, (double)intersect_time / (double)total_time);
+
 	cudaFree(A_starts_d);
 	cudaFree(A_lens_d);
 	cudaFree(B_starts_d);
@@ -484,7 +456,7 @@ void count_bsearch_cuda (	unsigned int *A_start,
 }
 //}}}
 
-//{{{ __global__ void count_bsearch_cuda (	unsigned int *A_start,
+//{{{ __global__ void count_i_gm_bsearch_cuda (	unsigned int *A_start,
 /*
  * @param A_start list of start positions to query, does not need to be sorted
  * @param A_len list of lengths that correspond to A_start
@@ -496,7 +468,7 @@ void count_bsearch_cuda (	unsigned int *A_start,
  * @param n number of intervals per thread
  */
 __global__
-void count_i_bsearch_cuda (	unsigned int *A_start,
+void count_i_gm_bsearch_cuda (	unsigned int *A_start,
 							unsigned int *A_len,
 							int A_size,
 							unsigned int *B_start,
@@ -542,3 +514,73 @@ void count_i_bsearch_cuda (	unsigned int *A_start,
 }
 //}}}
 
+//{{{void allocate_and_move( struct interval *A,
+void allocate_and_move( struct interval *A,
+						unsigned int **A_starts_h,
+						unsigned int **A_starts_d,
+					   	unsigned int **A_lens_h ,
+						unsigned int **A_lens_d,
+						unsigned int size_A,
+
+						struct interval *B,
+						unsigned int **B_starts_h ,
+						unsigned int **B_starts_d,
+						unsigned int **B_ends_h ,
+						unsigned int **B_ends_d,
+						unsigned int size_B,
+
+						unsigned int **R_d)
+{
+
+	cudaError_t err;
+	//{{{ Move intervals to unsigned int arrays
+	*A_starts_h = (unsigned int *) malloc( (size_A) * sizeof(unsigned int));
+	*A_lens_h = (unsigned int *) malloc( (size_A) * sizeof(unsigned int));
+
+	*B_starts_h = (unsigned int *) malloc( (size_B) * sizeof(unsigned int));
+	*B_ends_h = (unsigned int *) malloc( (size_B) * sizeof(unsigned int));
+
+	int i;
+	for (i = 0; i < size_B; i++) {
+		(*B_starts_h)[i] = B[i].start;
+		(*B_ends_h)[i] = B[i].end;
+	}
+
+	for (i = 0; i < size_A; i++) {
+		(*A_starts_h)[i] = A[i].start;
+		(*A_lens_h)[i] = A[i].end - A[i].start;
+	}
+	//}}}
+
+	//{{{ Move inteval arrays to device
+	cudaMalloc((void **)A_starts_d, (size_A)*sizeof(unsigned int));
+	cudaMalloc((void **)A_lens_d, (size_A)*sizeof(unsigned int));
+	cudaMalloc((void **)B_starts_d, (size_B)*sizeof(unsigned int));
+	cudaMalloc((void **)B_ends_d, (size_B)*sizeof(unsigned int));
+
+	cudaMemcpy(*A_starts_d, *A_starts_h, (size_A) * sizeof(unsigned int), 
+			cudaMemcpyHostToDevice);
+	cudaMemcpy(*A_lens_d, *A_lens_h, (size_A) * sizeof(unsigned int),
+			cudaMemcpyHostToDevice);
+	cudaMemcpy(*B_starts_d, *B_starts_h, (size_B) * sizeof(unsigned int), 
+			cudaMemcpyHostToDevice);
+	cudaMemcpy(*B_ends_d, *B_ends_h, (size_B) * sizeof(unsigned int),
+			cudaMemcpyHostToDevice);
+
+	cudaThreadSynchronize();
+	err = cudaGetLastError();
+	if(err != cudaSuccess)
+		fprintf(stderr, "Interval move: %s.\n", cudaGetErrorString( err) );
+	//}}}
+	
+	//{{{ Alocate space for result on device
+	cudaMalloc((void **)R_d, (size_A)*sizeof(unsigned int));
+	unsigned long memup_time = report();
+
+	cudaThreadSynchronize();
+	err = cudaGetLastError();
+	if(err != cudaSuccess)
+		fprintf(stderr, "R_d malloc: %s.\n", cudaGetErrorString( err) );
+	//}}}
+}
+//}}}
