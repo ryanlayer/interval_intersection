@@ -1,8 +1,8 @@
 CFLAGS=-g
-
-BSEARCH_PATH=/home/rl6sf/src/binary_search/lib
-MT_PATH=/home/rl6sf/src/utils/c/mt
-TIMER_PATH=/home/rl6sf/src/utils/c/timer
+SRC_PATH=$(HOME)/src
+BSEARCH_PATH=$(SRC_PATH)/binary_search/lib
+MT_PATH=$(SRC_PATH)/utils/c/mt
+TIMER_PATH=$(SRC_PATH)/utils/c/timer
 
 INCLUDES=-I../lib \
 		 -I$(BSEARCH_PATH)\
