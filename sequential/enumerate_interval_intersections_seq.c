@@ -34,12 +34,18 @@ int main(int argc, char *argv[])
 	struct interval *B = (struct interval *)
 			malloc(size_B * sizeof(struct interval));
 
+	unsigned int *R = (unsigned int *)
+			malloc(size_A * sizeof(unsigned int));
+
 
 	init_genrand(seed);
 	generate_interval_sets(A, size_A, len_A, B, size_B, len_B, P);
 
 	start();
 	unsigned int O = count_intersections_bsearch_seq(A, size_A, B, size_B);
+
+unsigned int per_interval_count_intersections_bsearch_seq(struct interval *A,
+
 	stop();
 	unsigned long bsearch_time = report();
 

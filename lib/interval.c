@@ -19,6 +19,55 @@ int compare_interval_by_start (const void *a, const void *b)
 //}}}
 
 //{{{ unsigned int count_intersections_bsearch_seq(struct interval *A,
+unsigned int per_interval_count_intersections_bsearch_seq(struct interval *A,
+														   unsigned int size_A,
+														   struct interval *B,
+														   unsigned int size_B,
+														   unsigned int *R)
+{
+
+	unsigned int i, O = 0;
+
+	unsigned int *B_starts =
+			(unsigned int *) malloc(size_B * sizeof(unsigned int));
+	unsigned int *B_ends =
+			(unsigned int *) malloc(size_B * sizeof(unsigned int));
+
+	for (i = 0; i < size_B; i++) {
+		B_starts[i] = B[i].start;
+		B_ends[i] = B[i].end;
+	}
+
+	qsort(B_starts, size_B, sizeof(unsigned int), compare_unsigned_int); 
+	qsort(B_ends, size_B, sizeof(unsigned int), compare_unsigned_int); 
+
+	for (i = 0; i < size_A; i++) {
+		unsigned int num_cant_before = bsearch_seq(A[i].start,
+												   B_ends,
+												   size_B,
+												   -1,
+												   size_B);
+		unsigned int b = bsearch_seq(A[i].end,
+								     B_starts,
+								     size_B,
+								     -1,
+								     size_B);
+
+		while ( ( B_starts[b] == A[i].end) && b < size_B)
+			++b;
+
+		unsigned int num_cant_after = size_B - b;
+
+		unsigned int num_left = size_B - num_cant_before - num_cant_after;
+		O += num_left;
+		R[i] = num_left;
+	}
+
+	return O;
+}
+//}}}
+
+//{{{ unsigned int count_intersections_bsearch_seq(struct interval *A,
 unsigned int count_intersections_bsearch_seq(struct interval *A,
 										     unsigned int size_A,
 											 struct interval *B,

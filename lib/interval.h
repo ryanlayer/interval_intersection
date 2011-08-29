@@ -7,6 +7,12 @@ struct interval {
 
 int compare_interval_by_start (const void *a, const void *b);
 
+unsigned int per_interval_count_intersections_bsearch_seq(struct interval *A,
+														   unsigned int size_A,
+														   struct interval *B,
+														   unsigned int size_B,
+														   unsigned int *R);
+
 unsigned int count_intersections_bsearch_seq(struct interval *A,
 										     unsigned int size_A,
 											 struct interval *B,
