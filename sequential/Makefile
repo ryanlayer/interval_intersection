@@ -24,6 +24,21 @@ count_interval_intersections_seq: count_interval_intersections_seq.o $(LIB_OBJS)
 		$(LIB_OBJS) \
 		-lm
 
+enumerate_interval_intersections_seq: enumerate_interval_intersections_seq.o \
+	$(LIB_OBJS)
+	gcc -o enumerate_interval_intersections_seq \
+		enumerate_interval_intersections_seq.o \
+		$(LIB_OBJS) \
+		-lm
+
+per_interval_count_interval_intersections_seq: \
+	per_interval_count_interval_intersections_seq.o \
+	$(LIB_OBJS)
+	gcc -o per_interval_count_interval_intersections_seq \
+		per_interval_count_interval_intersections_seq.o \
+		$(LIB_OBJS) \
+		-lm
+
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) $< -o $@
 
