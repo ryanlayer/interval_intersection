@@ -18,53 +18,70 @@ int compare_interval_by_start (const void *a, const void *b)
 }
 //}}}
 
-//{{{ unsigned int per_interval_count_intersections_bsearch_seq(struct interval *A,
+//{{{ void enumerate_intersections_bsearch_seq(struct interval *A,
+
+/**
+  * @param A intervals in set A
+  * @param size_A size of set A
+  * @param B intervals in set B
+  * @param size_B size of set B
+  * @param R prefix sum of the intersection between A and B, A[0] is the number
+  * of intervals in B that intersect A[0], A[1] is A[0] + the number of
+  * intervals in B that intersect A[1], and so on
+  * @param E array that will hold the enumberated interval intersections
+  * @param size_E 
+  */
 void enumerate_intersections_bsearch_seq(struct interval *A,
 										 unsigned int size_A,
 										 struct interval *B,
 										 unsigned int size_B,
 										 unsigned int *R,
-										 unsigned int *E)
+										 unsigned int *E,
+										 unsigned int size_E)
 {
 
 	unsigned int i, O = 0;
 
+	qsort(B, size_B, sizeof(struct interval), compare_interval_by_start); 
+
 	unsigned int *B_starts =
 			(unsigned int *) malloc(size_B * sizeof(unsigned int));
-	unsigned int *B_ends =
-			(unsigned int *) malloc(size_B * sizeof(unsigned int));
 
-	for (i = 0; i < size_B; i++) {
+	for (i = 0; i < size_B; i++)
 		B_starts[i] = B[i].start;
-		B_ends[i] = B[i].end;
-	}
 
-	qsort(B_starts, size_B, sizeof(unsigned int), compare_unsigned_int); 
-	qsort(B_ends, size_B, sizeof(unsigned int), compare_unsigned_int); 
+	unsigned int start = 0, end = 0, o;
 
 	for (i = 0; i < size_A; i++) {
-		unsigned int num_cant_before = bsearch_seq(A[i].start,
-												   B_ends,
-												   size_B,
-												   -1,
-												   size_B);
-		unsigned int b = bsearch_seq(A[i].end,
-								     B_starts,
-								     size_B,
-								     -1,
-								     size_B);
+		end = R[i];
+		o = end - start;
 
-		while ( ( B_starts[b] == A[i].end) && b < size_B)
-			++b;
+		if (o > 0) {
+			//printf("%d\t", i);
+			unsigned int from = bsearch_seq(A[i].end,
+										B_starts,
+										size_B,
+										-1,
+										size_B);
 
-		unsigned int num_cant_after = size_B - b;
+			while ( ( B_starts[from] == A[i].end) && from < size_B)
+				++from;
 
-		unsigned int num_left = size_B - num_cant_before - num_cant_after;
-		O += num_left;
-		R[i] = num_left;
+			while ( (from > 0) && (o > 0) ) {
+				// test if A[i] intersects B[from]
+				if ( (A[i].start <= B[from].end) &&
+					 (A[i].end >= B[from].start) ) {
+					E[start] = from;
+					//printf("%d,%u\t", start,from);
+					--o;
+					start++;
+				} 
+
+				--from;
+			}
+			//printf("\n");
+		}
 	}
-
-	return O;
 }
 //}}}
 

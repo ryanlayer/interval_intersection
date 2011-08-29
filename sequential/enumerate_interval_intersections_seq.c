@@ -44,24 +44,45 @@ int main(int argc, char *argv[])
 	start();
 	unsigned int O = per_interval_count_intersections_bsearch_seq(
 		A, size_A, B, size_B, R);
-	stop();
-	unsigned long bsearch_time = report();
 
 	unsigned int T = 0;
 	int i;
 	for (i = 0; i < size_A; i++) {
+		//printf("%d\ti:%u\n", i, R[i]);
 		T = T + R[i];
 		R[i] = T;
 	}
-
 	
 	unsigned int *E = (unsigned int *)
 			malloc(O * sizeof(unsigned int));
 
-	//int i;
-	//for (i = 0; i < size_A; i++)
-		//if (R[i] != 0)
-			//printf("%d\t%u\n", i, R[i]);
+	enumerate_intersections_bsearch_seq(A,
+											 size_A,
+											 B,
+											 size_B,
+											 R,
+											 E,
+											 O);
+	stop();
+	unsigned long bsearch_time = report();
+
+	unsigned int start = 0, end = 0;
+	for (i = 0; i < size_A; i++) {
+		end = R[i];
+		printf("%d (%u): ", i, end-start);
+		for ( ; start < end; start++)
+			printf("%u\t", E[start]);
+		printf("\n");
+	}
+
+
 	printf("b:%u,%lu\n",
 		   O, bsearch_time);
+	for (i = 0; i < size_A; i++) 
+		printf("%d\t(%u,%u)\t(%u,%u)\n",
+				i,
+			A[i].start,
+			A[i].end,
+			B[i].start,
+			B[i].end);
 }
