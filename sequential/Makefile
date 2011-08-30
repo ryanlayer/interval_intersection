@@ -1,4 +1,5 @@
 CFLAGS=-g
+CC=/usr/bin/gcc
 SRC_PATH=$(HOME)/src
 BSEARCH_PATH=$(SRC_PATH)/binary_search/lib
 MT_PATH=$(SRC_PATH)/utils/c/mt
@@ -9,7 +10,9 @@ INCLUDES=-I../lib \
 		 -I$(MT_PATH)\
 		 -I$(TIMER_PATH)
 
-EXECS=count_interval_intersections_seq
+EXECS=count_interval_intersections_seq \
+	  enumerate_interval_intersections_seq \
+	  per_interval_count_interval_intersections_seq
 
 LIB_OBJS=../lib/interval.o \
 		 $(BSEARCH_PATH)/bsearch.o \
@@ -19,14 +22,14 @@ LIB_OBJS=../lib/interval.o \
 all: $(EXECS)
 
 count_interval_intersections_seq: count_interval_intersections_seq.o $(LIB_OBJS)
-	gcc -o count_interval_intersections_seq \
+	$(CC) -o count_interval_intersections_seq \
 		count_interval_intersections_seq.o \
 		$(LIB_OBJS) \
 		-lm
 
 enumerate_interval_intersections_seq: enumerate_interval_intersections_seq.o \
 	$(LIB_OBJS)
-	gcc -o enumerate_interval_intersections_seq \
+	$(CC) -o enumerate_interval_intersections_seq \
 		enumerate_interval_intersections_seq.o \
 		$(LIB_OBJS) \
 		-lm
@@ -34,7 +37,7 @@ enumerate_interval_intersections_seq: enumerate_interval_intersections_seq.o \
 per_interval_count_interval_intersections_seq: \
 	per_interval_count_interval_intersections_seq.o \
 	$(LIB_OBJS)
-	gcc -o per_interval_count_interval_intersections_seq \
+	$(CC) -o per_interval_count_interval_intersections_seq \
 		per_interval_count_interval_intersections_seq.o \
 		$(LIB_OBJS) \
 		-lm
