@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
 	unsigned int size_I = atoi(argv[7]);
 	unsigned int size_T = size_I;
 
-	struct interval *A, *B;
 
 	/*
 	 *	Each node will take all of A, and a portion of B, then the final set
@@ -65,80 +64,106 @@ int main(int argc, char *argv[]) {
 
 	unsigned int work_start = rank * int_work + min(rank, mod_work);
 
+	struct interval *A, *B;
+
+	A = (struct interval *)
+			malloc(size_A * sizeof(struct interval));
 	// Node 0 generates the random sets
 	if (rank == 0) {
-		A = (struct interval *)
-				malloc(size_A * sizeof(struct interval));
 		B = (struct interval *)
 				malloc(size_B * sizeof(struct interval));
-
 		init_genrand(seed);
 		generate_interval_sets(A, size_A, len_A, B, size_B, len_B, P);
 	} else {
-		A = (struct interval *)
-				malloc(size_A * sizeof(struct interval));
 		B = (struct interval *)
 				malloc(node_work * sizeof(struct interval));
 	}
 
-	fprintf(stderr, "%d\tw:%u\ts:%u\n", rank, node_work, work_start);
+	//fprintf(stderr, "%d\tw:%u\ts:%u\n", rank, node_work, work_start);
 
+	start();
 	unsigned int seen = 0;
 	if (rank == 0) {
 		while ( seen < (size - 1) ) {
 			unsigned int send_work;
 			// get the address of the client and how much data it wants
-			MPI_Recv(&send_work, 1, MPI_UNSIGNED, MPI_ANY_SOURCE, GET_REQ,
-					MPI_COMM_WORLD, &status);
-
-
+			MPI_Recv(&send_work,
+					 1,
+					 MPI_UNSIGNED,
+					 MPI_ANY_SOURCE,
+					 GET_REQ,
+					 MPI_COMM_WORLD,
+					 &status);
 			// send the full A
-			MPI_Send(A, size_A, MPI_UNSIGNED, status.MPI_SOURCE, SEND_A,
-					MPI_COMM_WORLD);
+			MPI_Send(A,
+					 size_A * sizeof(struct interval),
+					 MPI_BYTE,
+					 status.MPI_SOURCE,
+					 SEND_A,
+					 MPI_COMM_WORLD);
 
 			// calculated where the next piece of work starts
 			unsigned int remote_work_start = (status.MPI_SOURCE ) * int_work +
 					min(status.MPI_SOURCE, mod_work);
 
-			fprintf(stderr, "r:%d\ts:%u\n", status.MPI_SOURCE,
-						remote_work_start);
-
 			// send its portion of B
-			MPI_Send(B + remote_work_start, send_work, MPI_UNSIGNED,
-					status.MPI_SOURCE, SEND_B, MPI_COMM_WORLD);
-
+			MPI_Send(B + remote_work_start,
+					 send_work * sizeof(struct interval),
+					 MPI_BYTE,
+					 status.MPI_SOURCE,
+					 SEND_B,
+					 MPI_COMM_WORLD);
 			++seen;
 		}
 	} else { // rank != 0
-		MPI_Send(&node_work, 1, MPI_UNSIGNED, 0, GET_REQ, MPI_COMM_WORLD);
-		MPI_Recv(A, size_A, MPI_UNSIGNED, 0, SEND_A, MPI_COMM_WORLD, &status);
-		MPI_Recv(B, 1, node_work, 0, SEND_B, MPI_COMM_WORLD, &status);
+		MPI_Send(&node_work,
+				 1,
+				 MPI_UNSIGNED,
+				 0,
+				 GET_REQ,
+				 MPI_COMM_WORLD);
+		MPI_Recv(A,
+				 size_A * sizeof(struct interval),
+				 MPI_BYTE,
+				 0,
+				 SEND_A,
+				 MPI_COMM_WORLD,
+				 &status);
+		MPI_Recv(B,
+				 node_work * sizeof(struct interval),
+				 MPI_BYTE,
+				 0,
+				 SEND_B,
+				 MPI_COMM_WORLD,
+				 &status);
 	}
+	//stop();
+	//unsigned long mpi_setup_time = report();
 
-	/*************************************************/
-	/*
-		int i;
-		while (seen < (size - 1)) {
-			MPI_Recv(R_r, A_size, MPI_UNSIGNED, MPI_ANY_SOURCE, 0,
-					MPI_COMM_WORLD, &status);
-			++seen;
-			for (i = 0; i < A_size; i++) 
-				R[i] += R_r[i];
-		}
-		for (i = 0; i < A_size; i++) 
-			O += R[i];
-	} else {
-		MPI_Send(R, A_size, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD);
-	}
+	//start();
+	unsigned int O = count_intersections_bsearch_seq(A, size_A, B, node_work);
+	//stop();
+	//unsigned long bsearch_time = report();
 
+	unsigned int T = 0;
+
+	//start();
+	MPI_Reduce( &O, &T, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
 	stop();
-	unsigned long total = report();
+	unsigned long reduce_time = report();
 
-	if (rank == 0)
-		printf("%d,%d,%d\tO:%d\t\tt:%ld\tc:%d\ts:%d\n",
-				A_size, line, A_size + line, O, total, chunk_size, size);
+	fprintf(stderr, "%d\tO:%u,%u\t"
+			"s:%lu\n",
+			//"b:%lu\t"
+			//"r:%lu\t"
+			//"t:%lu\n",
+			rank, O, T,
+			reduce_time);
+			//mpi_setup_time,
+		   	//bsearch_time,
+			//reduce_time,
+			//mpi_setup_time + bsearch_time + reduce_time);
 
-	*/
 	MPI_Finalize();
 
 	return 0;

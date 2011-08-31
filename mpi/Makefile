@@ -10,7 +10,8 @@ INCLUDES=-I../lib \
 		 -I$(MT_PATH)\
 		 -I$(TIMER_PATH)
 
-EXECS=count_interval_intersections_mpi
+EXECS=count_interval_intersections_mpi \
+	  per_interval_count_interval_intersections_mpi
 
 LIB_OBJS=../lib/interval.o \
 		 $(BSEARCH_PATH)/bsearch.o \
@@ -20,6 +21,13 @@ LIB_OBJS=../lib/interval.o \
 .SUFFIXES: .c .cpp .cu .o .mpi.c .mpi.o
 
 all: $(EXECS)
+
+per_interval_count_interval_intersections_mpi: per_interval_count_interval_intersections_mpi.mpi.o \
+		$(LIB_OBJS)
+	$(MPICC) -o per_interval_count_interval_intersections_mpi \
+		per_interval_count_interval_intersections_mpi.mpi.o \
+		$(LIB_OBJS) \
+		-lm
 
 count_interval_intersections_mpi: count_interval_intersections_mpi.mpi.o \
 		$(LIB_OBJS)
