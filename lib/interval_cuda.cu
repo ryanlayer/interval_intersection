@@ -10,6 +10,113 @@
 #include "bsearch_cuda.h"
 #include "bsearch_cuda.cu"
 
+//{{{ per_interval_count_intersections_bsearch_seq 
+void per_interval_count_intersections_bsearch_cuda(struct interval *A,
+												  unsigned int size_A,
+												  struct interval *B,
+												  unsigned int size_B,
+												  unsigned int *R)
+{
+	int block_size = 256;
+	dim3 dimBlock(block_size);
+	int grid_size = ( size_A + block_size - 1) / (block_size * 1);
+	dim3 dimGridSearch( grid_size );
+	cudaError_t err;
+
+	start(); //data_prep_time
+
+	unsigned int *A_starts_h, *A_lens_h, *B_starts_h, *B_ends_h;
+	unsigned int *A_starts_d, *A_lens_d, *B_starts_d, *B_ends_d;
+	unsigned int *R_d;
+	allocate_and_move(A,
+					&A_starts_h,
+					&A_starts_d,
+					&A_lens_h ,
+					&A_lens_d,
+					size_A,
+					B,
+					&B_starts_h ,
+					&B_starts_d,
+					&B_ends_h ,
+					&B_ends_d,
+					size_B,
+					&R_d);
+
+	stop(); //data_prep_time
+	unsigned long data_prep_time = report();
+
+	start(); //sort_time
+
+	//{{{ Sort B_starts and B_ends
+	// Sort B by start
+	nvRadixSort::RadixSort radixsortB_starts(size_B, true);
+	radixsortB_starts.sort((unsigned int*)B_starts_d, 0, size_B, 32);
+
+	cudaThreadSynchronize();
+	err = cudaGetLastError();
+	if(err != cudaSuccess)
+		fprintf(stderr, "Sort B_starts: %s.\n", cudaGetErrorString( err) );
+
+	// Sort B by end
+	nvRadixSort::RadixSort radixsortB_ends(size_B, true);
+	radixsortB_ends.sort((unsigned int*)B_ends_d, 0, size_B, 32);
+
+	cudaThreadSynchronize();
+	err = cudaGetLastError();
+	if(err != cudaSuccess)
+		fprintf(stderr, "Sort B_ends: %s.\n", cudaGetErrorString( err) );
+	//}}}
+
+	stop(); //sort_time
+	unsigned long sort_time = report();
+
+	start(); //intersect_time
+
+	//{{{ Compute and count intersections
+	count_bsearch_cuda <<<dimGridSearch, dimBlock >>> (
+			A_starts_d, A_lens_d, size_A,
+			B_starts_d, B_ends_d, size_B,
+			R_d,
+			1);
+
+	cudaThreadSynchronize();
+	err = cudaGetLastError();
+	if(err != cudaSuccess)
+		fprintf(stderr, "Sort B_ends: %s.\n", cudaGetErrorString( err) );
+
+	cudaMemcpy(R, R_d, size_A* sizeof(unsigned int), cudaMemcpyDeviceToHost);
+
+	cudaThreadSynchronize();
+	err = cudaGetLastError();
+	if(err != cudaSuccess)
+		fprintf(stderr, "Result move: %s.\n", cudaGetErrorString( err) );
+
+	//}}}
+	
+	stop(); //intersect_time
+	unsigned long intersect_time = report();
+
+	unsigned long total_time = data_prep_time + 
+							   sort_time +
+							   intersect_time;
+	printf("bsearch\t"
+		   "total:%lu\t"
+		   "prep:%lu,%f\t"
+		   "sort:%lu,%f\t"
+		   "intersect:%lu,%f\n",
+		   total_time,
+		   data_prep_time,  (double)data_prep_time / (double)total_time,
+		   sort_time, (double)sort_time / (double)total_time,
+		   intersect_time, (double)intersect_time / (double)total_time);
+
+	cudaFree(A_starts_d);
+	cudaFree(A_lens_d);
+	cudaFree(B_starts_d);
+	cudaFree(B_ends_d);
+	cudaFree(R_d);
+}
+//}}}
+
 //{{{ unsigned int count_intersections_bsearch_cuda(struct interval *A,
 unsigned int count_intersections_bsearch_cuda(struct interval *A,
 										      unsigned int size_A,

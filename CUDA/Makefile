@@ -49,7 +49,8 @@ C_SRC=$(INTERVAL_INTERSECTION_PATH)/interval.c \
 
 .SUFFIXES: .c .cpp .cu .o
 
-EXECS=count_interval_intersections_cuda
+EXECS=count_interval_intersections_cuda \
+	  per_interval_count_interval_intersections_cuda
 
 all: $(EXECS)
 

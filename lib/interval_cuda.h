@@ -1,6 +1,12 @@
 #ifndef __INTERVAL_CUDA_H__
 #define __INTERVAL_CUDA_H__
 
+void per_interval_count_intersections_bsearch_cuda(struct interval *A,
+												  unsigned int size_A,
+												  struct interval *B,
+												  unsigned int size_B,
+												  unsigned int *R);
+
 unsigned int count_intersections_bsearch_cuda(struct interval *A,
 										      unsigned int size_A,
 											  struct interval *B,
