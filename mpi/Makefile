@@ -22,19 +22,24 @@ LIB_OBJS=../lib/interval.o \
 
 all: $(EXECS)
 
-per_interval_count_interval_intersections_mpi: per_interval_count_interval_intersections_mpi.mpi.o \
-		$(LIB_OBJS)
-	$(MPICC) -o per_interval_count_interval_intersections_mpi \
-		per_interval_count_interval_intersections_mpi.mpi.o \
-		$(LIB_OBJS) \
-		-lm
+%: %.mpi.o $(LIB_OBJS)
+	$(MPICC) $(LFLAGS_A) -o $@ \
+		$(C_SRC) $(INCLUDES) $+ $(LFLAGS_B)
 
-count_interval_intersections_mpi: count_interval_intersections_mpi.mpi.o \
+
+#per_interval_count_interval_intersections_mpi: per_interval_count_interval_intersections_mpi.mpi.o \
 		$(LIB_OBJS)
-	$(MPICC) -o count_interval_intersections_mpi \
-		count_interval_intersections_mpi.mpi.o \
-		$(LIB_OBJS) \
-		-lm
+	#$(MPICC) -o per_interval_count_interval_intersections_mpi \
+		#per_interval_count_interval_intersections_mpi.mpi.o \
+		#$(LIB_OBJS) \
+		#-lm
+
+#count_interval_intersections_mpi: count_interval_intersections_mpi.mpi.o \
+		#$(LIB_OBJS)
+	#$(MPICC) -o count_interval_intersections_mpi \
+		#count_interval_intersections_mpi.mpi.o \
+		#$(LIB_OBJS) \
+		#-lm
 
 %.mpi.o: %.mpi.c
 	$(MPICC) -c $(CFLAGS) $(INCLUDES) $< -o $@
